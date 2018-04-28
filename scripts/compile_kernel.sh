@@ -224,8 +224,10 @@ function create_kernel_deb_packages () {
     cp $BUILD_RESULTS/$pi_version/${IMAGE_NAME[${pi_version}]} $NEW_KERNEL/boot
     cp -R $BUILD_RESULTS/$pi_version/modules/lib/modules/* $NEW_KERNEL/modules
   done
-  echo "copying dtb files to $NEW_KERNEL/boot"
-  cp $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/boot/dts/bcm27*.dtb $NEW_KERNEL/boot
+  for PI_VERSION in ${!CARCH[@]}; do
+    echo "copying ${CARCH[${PI_VERSION}]} dtb files to $NEW_KERNEL/boot"
+    cp $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/boot/dts/bcm27*.dtb $NEW_KERNEL/boot
+  done
   # build debian packages
   cd $NEW_KERNEL
 
