@@ -47,6 +47,14 @@ BUILD_RESULTS=$BUILD_ROOT/results/kernel-$NEW_VERSION
 
 X64_CROSS_COMPILE_CHAIN=arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64
 
+declare -A CARCH
+CARCH["rpi1"]=arm
+CARCH["rpi2_3"]=arm
+
+declare -A CDEBARCH
+CDEBARCH["rpi1"]=armhf
+CDEBARCH["rpi2_3"]=armhf
+
 declare -A CCPREFIX
 CCPREFIX["rpi1"]=$ARM_TOOLS/$X64_CROSS_COMPILE_CHAIN/bin/arm-linux-gnueabihf-
 CCPREFIX["rpi2_3"]=$ARM_TOOLS/$X64_CROSS_COMPILE_CHAIN/bin/arm-linux-gnueabihf-
@@ -140,30 +148,30 @@ create_kernel_for () {
   echo "### git commit id of this kernel build is ${KERNEL_COMMIT}"
 
   # clean build artifacts
-  make ARCH=arm clean
+  make ARCH=${CARCH[${PI_VERSION}]} clean
 
   # copy kernel configuration file over
-  cp $LINUX_KERNEL/arch/arm/configs/${ORIGDEFCONFIG[${PI_VERSION}]} $LINUX_KERNEL/arch/arm/configs/${DEFCONFIG[${PI_VERSION}]}
-  cat $LINUX_KERNEL_CONFIGS/docker_delta_defconfig >> $LINUX_KERNEL/arch/arm/configs/${DEFCONFIG[${PI_VERSION}]}
+  cp $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/configs/${ORIGDEFCONFIG[${PI_VERSION}]} $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/configs/${DEFCONFIG[${PI_VERSION}]}
+  cat $LINUX_KERNEL_CONFIGS/docker_delta_defconfig >> $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/configs/${DEFCONFIG[${PI_VERSION}]}
 
   echo "### building kernel"
   mkdir -p $BUILD_RESULTS/$PI_VERSION
   echo $KERNEL_COMMIT > $BUILD_RESULTS/kernel-commit.txt
   if [ ! -z "${MENUCONFIG}" ]; then
-    cp $LINUX_KERNEL/arch/arm/configs/${DEFCONFIG[${PI_VERSION}]} $LINUX_KERNEL/.config
+    cp $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/configs/${DEFCONFIG[${PI_VERSION}]} $LINUX_KERNEL/.config
     echo "### starting menuconfig"
-    ARCH=arm CROSS_COMPILE=${CCPREFIX[$PI_VERSION]} make menuconfig
+    ARCH=${CARCH[${PI_VERSION}]} CROSS_COMPILE=${CCPREFIX[$PI_VERSION]} make menuconfig
     echo "### saving new config back to $LINUX_KERNEL_CONFIGS/${PI_VERSION}_docker_kernel_config"
     cp $LINUX_KERNEL/.config $LINUX_KERNEL_CONFIGS/${PI_VERSION}_docker_kernel_config
-    ARCH=arm CROSS_COMPILE=${CCPREFIX[$PI_VERSION]} make savedefconfig
+    ARCH=${CARCH[${PI_VERSION}]} CROSS_COMPILE=${CCPREFIX[$PI_VERSION]} make savedefconfig
     cp $LINUX_KERNEL/defconfig $LINUX_KERNEL_CONFIGS/${PI_VERSION}_docker_defconfig
     return
   fi
 
   echo "### building kernel and deb packages"
-  KBUILD_DEBARCH=armhf ARCH=arm CROSS_COMPILE=${CCPREFIX[${PI_VERSION}]} make ${DEFCONFIG[${PI_VERSION}]} deb-pkg -j$NUM_CPUS
+  KBUILD_DEBARCH=${CDEBARCH[${PI_VERSION}]} ARCH=${CARCH[${PI_VERSION}]} CROSS_COMPILE=${CCPREFIX[${PI_VERSION}]} make ${DEFCONFIG[${PI_VERSION}]} deb-pkg -j$NUM_CPUS
 
-  version=$(${LINUX_KERNEL}/scripts/mkknlimg --ddtk $LINUX_KERNEL/arch/arm/boot/Image $BUILD_RESULTS/$PI_VERSION/${IMAGE_NAME[${PI_VERSION}]} | head -1 | sed 's/Version: //')
+  version=$(${LINUX_KERNEL}/scripts/mkknlimg --ddtk $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/boot/Image $BUILD_RESULTS/$PI_VERSION/${IMAGE_NAME[${PI_VERSION}]} | head -1 | sed 's/Version: //')
   suffix=""
   if [ "$PI_VERSION" == "rpi2_3" ]; then
     suffix="7"
@@ -172,7 +180,7 @@ create_kernel_for () {
 
   echo "### installing kernel modules"
   mkdir -p $BUILD_RESULTS/$PI_VERSION/modules
-  ARCH=arm CROSS_COMPILE=${CCPREFIX[${PI_VERSION}]} INSTALL_MOD_PATH=$BUILD_RESULTS/$PI_VERSION/modules make modules_install -j$NUM_CPUS
+  ARCH=${CARCH[${PI_VERSION}]} CROSS_COMPILE=${CCPREFIX[${PI_VERSION}]} INSTALL_MOD_PATH=$BUILD_RESULTS/$PI_VERSION/modules make modules_install -j$NUM_CPUS
 
   # remove symlinks, mustn't be part of raspberrypi-bootloader*.deb
   echo "### removing symlinks"
@@ -217,7 +225,7 @@ function create_kernel_deb_packages () {
     cp -R $BUILD_RESULTS/$pi_version/modules/lib/modules/* $NEW_KERNEL/modules
   done
   echo "copying dtb files to $NEW_KERNEL/boot"
-  cp $LINUX_KERNEL/arch/arm/boot/dts/bcm27*.dtb $NEW_KERNEL/boot
+  cp $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/boot/dts/bcm27*.dtb $NEW_KERNEL/boot
   # build debian packages
   cd $NEW_KERNEL
 
