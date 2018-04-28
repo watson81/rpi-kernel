@@ -90,10 +90,11 @@ function clone_or_update_repo_for () {
     git pull
     popd
   else
-    echo "Cloning $repo_path with commit $repo_commit"
+    echo "Cloning $repo_path"
     git clone --depth 1 $repo_url $repo_path
     if [ ! -z "${repo_commit}" ]; then
-      cd $repo_path && git checkout -qf ${repo_commit}
+      echo "Deepening $repo_path by 2048"
+      cd $repo_path && git fetch --depth 2048 && git checkout -qf ${repo_commit}
     fi
   fi
 }
