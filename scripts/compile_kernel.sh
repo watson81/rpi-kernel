@@ -91,7 +91,7 @@ function clone_or_update_repo_for () {
     popd
   else
     echo "Cloning $repo_path with commit $repo_commit"
-    git clone $repo_url $repo_path
+    git clone --depth 1 $repo_url $repo_path
     if [ ! -z "${repo_commit}" ]; then
       cd $repo_path && git checkout -qf ${repo_commit}
     fi
