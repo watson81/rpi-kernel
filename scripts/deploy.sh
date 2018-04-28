@@ -15,7 +15,7 @@ if [ "$CIRCLE_TAG" != "" ]; then
   if [[ $CIRCLE_TAG = *"rc"* ]]; then
     pre=-prerelease
   fi
-  ./ghr $pre -u hypriot "$CIRCLE_TAG" ghroutput/
+  ./ghr $pre -u $CIRCLE_USERNAME "$CIRCLE_TAG" ghroutput/
 
 else
   echo "No release tag detected. Skip deployment."
