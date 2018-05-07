@@ -137,10 +137,10 @@ function prepare_kernel_building () {
 
 
 create_kernel_for () {
+  local PI_VERSION=$1
+  
   echo "###############"
   echo "### START building kernel for ${PI_VERSION}"
-
-  local PI_VERSION=$1
 
   cd $LINUX_KERNEL
 
@@ -193,7 +193,7 @@ create_kernel_for () {
   mv ../*.deb $BUILD_RESULTS
   echo "###############"
   echo "### END building kernel for ${PI_VERSION}"
-  echo "### Check the $BUILD_RESULTS/$PI_VERSION/kernel.img and $BUILD_RESULTS/$PI_VERSION/modules directory on your host machine."
+  echo "### Check the $BUILD_RESULTS/$PI_VERSION/kernel${IMAGE_NAME_SUFFIX[${PI_VERSION}]}.img and $BUILD_RESULTS/$PI_VERSION/modules directory on your build machine."
 }
 
 function create_kernel_deb_packages () {
