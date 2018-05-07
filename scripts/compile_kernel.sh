@@ -67,9 +67,13 @@ declare -A DEFCONFIG
 DEFCONFIG["rpi1"]=rpi1_docker_defconfig
 DEFCONFIG["rpi2_3"]=rpi2_3_docker_defconfig
 
-declare -A IMAGE_NAME
-IMAGE_NAME["rpi1"]=kernel.img
-IMAGE_NAME["rpi2_3"]=kernel7.img
+declare -A IMAGE_NAME_SUFFIX
+IMAGE_NAME_SUFFIX["rpi1"]=""
+IMAGE_NAME_SUFFIX["rpi2_3"]="7"
+
+declare -A DTB_GLOB
+DTB_GLOB["rpi1"]='bcm2708*.dtb'
+DTB_GLOB["rpi2_3"]='bcm27[01][09]*.dtb'
 
 function create_dir_for_build_user () {
     local target_dir=$1
@@ -171,12 +175,8 @@ create_kernel_for () {
   echo "### building kernel and deb packages"
   KBUILD_DEBARCH=${CDEBARCH[${PI_VERSION}]} ARCH=${CARCH[${PI_VERSION}]} CROSS_COMPILE=${CCPREFIX[${PI_VERSION}]} make ${DEFCONFIG[${PI_VERSION}]} deb-pkg -j$NUM_CPUS
 
-  version=$(${LINUX_KERNEL}/scripts/mkknlimg --ddtk $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/boot/Image $BUILD_RESULTS/$PI_VERSION/${IMAGE_NAME[${PI_VERSION}]} | head -1 | sed 's/Version: //')
-  suffix=""
-  if [ "$PI_VERSION" == "rpi2_3" ]; then
-    suffix="7"
-  fi
-  echo "$version" > $RASPBERRY_FIRMWARE/extra/uname_string$suffix
+  echo "### Making uname string"
+  ${LINUX_KERNEL}/scripts/mkknlimg --ddtk $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/boot/Image $BUILD_RESULTS/$PI_VERSION/kernel${IMAGE_NAME_SUFFIX[${PI_VERSION}]}.img | head -1 | sed 's/Version: //' > $RASPBERRY_FIRMWARE/extra/uname_string${IMAGE_NAME_SUFFIX[${PI_VERSION}]}
 
   echo "### installing kernel modules"
   mkdir -p $BUILD_RESULTS/$PI_VERSION/modules
@@ -221,12 +221,12 @@ function create_kernel_deb_packages () {
   done
 
   for pi_version in ${!CCPREFIX[@]}; do
-    cp $BUILD_RESULTS/$pi_version/${IMAGE_NAME[${pi_version}]} $NEW_KERNEL/boot
+    cp $BUILD_RESULTS/$pi_version/kernel${IMAGE_NAME_SUFFIX[${pi_version}]}.img $NEW_KERNEL/boot
     cp -R $BUILD_RESULTS/$pi_version/modules/lib/modules/* $NEW_KERNEL/modules
   done
   for PI_VERSION in ${!CARCH[@]}; do
-    echo "copying ${CARCH[${PI_VERSION}]} dtb files to $NEW_KERNEL/boot"
-    cp $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/boot/dts/bcm27*.dtb $NEW_KERNEL/boot
+    echo "copying $PI_VERSION dtb files to $NEW_KERNEL/boot"
+    cp $LINUX_KERNEL/arch/${CARCH[${PI_VERSION}]}/boot/dts/${DTB_GLOB[${PI_VERSION}]} $NEW_KERNEL/boot
   done
   # build debian packages
   cd $NEW_KERNEL
